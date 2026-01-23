@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Progress Tracker</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+        .progress-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .progress-bar {
+            height: 24px;
+            background: #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 12px;
+            transition: width 0.3s ease;
+        }
+        .progress-text {
+            text-align: center;
+            font-weight: 600;
+            color: #333;
+            margin-top: 8px;
+        }
+        .week {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .week h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+        .day {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        .day h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+        .video-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .video-item:last-child {
+            border-bottom: none;
+        }
+        .video-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+        .video-item a {
+            color: #667eea;
+            text-decoration: none;
+            flex: 1;
+        }
+        .video-item a:hover {
+            text-decoration: underline;
+        }
+        .video-item.completed a {
+            color: #999;
+            text-decoration: line-through;
+        }
+        .settings {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .settings label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+        .settings input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .settings input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .settings small {
+            color: #666;
+            display: block;
+            margin-top: 5px;
+        }
+        .reset-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 15px;
+        }
+        .reset-btn:hover {
+            background: #ee5a5a;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏋️ Training Progress</h1>
+        
+        <div class="progress-container">
+            <strong>Overall Progress</strong>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">0 / 0 completed</div>
+        </div>
+
+        <div id="weeks"></div>
+
+        <button class="reset-btn" onclick="resetProgress()">Reset All Progress</button>
+    </div>
+
+    <script>
+        const VIDEOS = {
+            "1-1-Morning": "https://drive.google.com/file/d/1-qrHBbq_hWgGVkFut9PUHsY_W3cgnDwG/view",
+            "1-1-Soft": "https://drive.google.com/file/d/1c9tt71cr6656KHFM7KOVvHytvuYq560S/view",
+            "1-1-Super": "https://drive.google.com/file/d/1TDLo-yIc5-6D3sZwXpUG6P1ZDqcKAALl/view",
+            "1-2-Morning": "https://drive.google.com/file/d/1t76OMCgh7TKwPAlQBOiQHVXAqaWr-T1G/view",
+            "1-2-Soft": "https://drive.google.com/file/d/1DTgfF_d9KvNiTuu4pecafpb_jZamTVOV/view",
+            "1-2-Super": "https://drive.google.com/file/d/1KH6gloWZXD0pxo5g7DRyiup0i070_BIk/view",
+            "1-3-Morning": "https://drive.google.com/file/d/1QcIrZpX2G3rm4fLiNYPkqm3c71qZhgqR/view",
+            "1-3-Soft": "https://drive.google.com/file/d/1yDLXpU5lphn40r21mhYuPSTB8YV5yktf/view",
+            "1-3-Super": "https://drive.google.com/file/d/1CH-qxrBkUIz9HAPj1tm6M38NnozcmmX-/view",
+            "1-4-Morning": "https://drive.google.com/file/d/1axKgV6Is4aqSKq73HtGqmjV-88NZmhGV/view",
+            "1-4-Soft": "https://drive.google.com/file/d/1B65YOojzNmVo8jAn0fo5lTMs4IReQ5ag/view",
+            "1-4-Super": "https://drive.google.com/file/d/1ORm8GZ5-9XrkUDTTH8DQmnoyiTImdOmi/view",
+            "1-5-Morning": "https://drive.google.com/file/d/1qHtJXStS43tqhp85QQ6pWCghH3t9bO4a/view",
+            "1-5-Soft": "https://drive.google.com/file/d/1nylGHTWVoHEbvzPmIOruR2Jw-XcZ1qQF/view",
+            "1-5-Power": "https://drive.google.com/file/d/1bkAJs_dcI3GA1AuAVuF-cJo4sXdFZVAm/view",
+            "1-6-Morning": "https://drive.google.com/file/d/1vzvSYl71oxZdl-6DSLWeyR-lp8yUFetY/view",
+            "1-6-Stretch": "https://drive.google.com/file/d/1HlEGOU17J0KlC6S0w3qkVmnErVXYxAj-/view",
+            "1-6-Swimmer": "https://drive.google.com/file/d/18flc7odOBsEGP5UWhFfbAcf-bOiiYxSZ/view",
+            "1-7-Steps": "https://drive.google.com/file/d/1aAjeE9jKl2SiHdGZeuxtUTmG6HOden4h/view",
+            "1-7-Surfer": "https://drive.google.com/file/d/1T2Bja1yAnYdG6APe1AOjLGA31rge6SYR/view",
+            "2-1-Morning": "https://drive.google.com/file/d/1plk0fg4oJplfgGwnzWN7YQzhVLyF-kvV/view",
+            "2-1-Soft": "https://drive.google.com/file/d/11oG7ieN8QMsjwZzWj4RMqiK7TQd2F1R1/view",
+            "2-1-Super": "https://drive.google.com/file/d/1ZR4fd1YAEw8tAoDrOrIS-u6U6byJSYz2/view",
+            "2-2-Morning": "https://drive.google.com/file/d/1YZXTBKjLI1VE0nSdqMwtqUu4I9bFtmOn/view",
+            "2-2-Soft": "https://drive.google.com/file/d/1RW_bgVTqFyIOPwP-eGq50udfb3vwqtOA/view",
+            "2-2-Super": "https://drive.google.com/file/d/1wWx6xQ0lHiyaGHQTc_tGTMN2p4OPwQYW/view",
+            "2-3-Morning": "https://drive.google.com/file/d/1w4K3vSxSMepuPNa8WMLp-K6yFlDtMEPH/view",
+            "2-3-Soft": "https://drive.google.com/file/d/1-OxO8BjVAA1Nnx7bj7AqbNtDjwfySeR7/view",
+            "2-3-Super": "https://drive.google.com/file/d/1HDv6CZq_iWG2ZHJRaHg0M50an4wtumnl/view",
+            "2-4-Morning": "https://drive.google.com/file/d/1uNkOBSkHN_bwtMLl-2GE7SOgjDjFhgFZ/view",
+            "2-4-Soft": "https://drive.google.com/file/d/1KWnk3d4M-M0NdrsAHCyS5kDXLwfeeM0G/view",
+            "2-4-Super": "https://drive.google.com/file/d/1W0poecS3aqam0YkXHCXvPAseBgwsdMG2/view",
+            "2-5-Morning": "https://drive.google.com/file/d/1EhSPYVNYrr6VsPWu6ZzAdxInKkB3Y8Qi/view",
+            "2-5-Soft": "https://drive.google.com/file/d/1nneorJzoW9b1zoSuLeLBNjsWzrtsGgup/view",
+            "2-5-Super": "https://drive.google.com/file/d/1-t9gs7LBNiBrdsqUPKCIQNe8uoSTb9Ou/view",
+            "2-6-Morning": "https://drive.google.com/file/d/1Ba9f_9QNKakG3qVhGaE7DPUvqKMThVOk/view",
+            "2-6-Barre": "https://drive.google.com/file/d/1ADs4RN9VnTYqiy_I7V4gFKAMAKGwg7ci/view",
+            "2-7-Steps": "https://drive.google.com/file/d/1YPH34HzwdMYuqGBRo7-IYrrGFsXAmTk2/view",
+            "2-7-Bonus": "https://drive.google.com/file/d/1A-s9qHjn-tz1ljkYKS2mdCKPu80JJQQn/view",
+            "3-1-Morning": "https://drive.google.com/file/d/1elGr-h0JPKeQuncU6Neer3HaPVy3D1Ya/view",
+            "3-1-Soft": "https://drive.google.com/file/d/11lgQtnSnSFFNYT4zkLnzyknsTafiz5PT/view",
+            "3-1-Super": "https://drive.google.com/file/d/1Dh5G_hGtD8LVvAVrO69fTDepa1SBq9c_/view",
+            "3-2-Morning": "https://drive.google.com/file/d/1CTLpsep1rdBEZoU7TzZT0AGeGe0osxiz/view",
+            "3-2-Soft": "https://drive.google.com/file/d/1HWxgLUIRRqfILmki9jOTLqOASrurPZEn/view",
+            "3-2-Super": "https://drive.google.com/file/d/1c-e1g5BqMUfoNjgkGeMq76MNci3Em8OE/view",
+            "3-3-Morning": "https://drive.google.com/file/d/1sP8OAaP2_-uvRCNeTgiX8lEbtQZ7fMRz/view",
+            "3-3-Soft": "https://drive.google.com/file/d/1ZUbO1CkWyKTdYozXhiP3iJ6jk8Fbk7P4/view",
+            "3-3-Super": "https://drive.google.com/file/d/1ZJeyy7CD7u5V7UJuZP49qJPbSFuSJBcC/view",
+            "3-4-Morning": "https://drive.google.com/file/d/1oZaebSbf0757lOPTiq24yOc1E8NfZGlw/view",
+            "3-4-Soft": "https://drive.google.com/file/d/1lvsBBxlFMlPukkbUc0oyzYgz0KBGp_-A/view",
+            "3-4-Super": "https://drive.google.com/file/d/1S9IYyPpsJmIp9ac5lHo6OzHUKq4yNgQ4/view",
+            "3-5-Morning": "https://drive.google.com/file/d/1ooAE51nhg6WsoLDwFvCFxxaFzLofv6dr/view",
+            "3-5-Soft": "https://drive.google.com/file/d/1PZ3FyGs8ztgDDMW0r3WFpQ-OHId3nfsR/view",
+            "3-5-Super": "https://drive.google.com/file/d/1rYybn7paDbXvgDZHNOHGSk5IMrP2elYT/view",
+            "3-6-Morning": "https://drive.google.com/file/d/11uY2dS5nrlaw2mCPzZvDQ9x-t4M4JcTR/view",
+            "3-6-Final": "https://drive.google.com/file/d/10_N4Fv8FeEd27TkyNMDaFM24Juqz-Vgp/view",
+            "3-7-Steps": "https://drive.google.com/file/d/1ftrvp9P_PN8ckNia0pz7bXkCTOw1p9oa/view",
+            "3-7-Relax": "https://drive.google.com/file/d/18K3YuI_Ar8ddRR7ZelcqcT-WLZCnVYpl/view"
+        };
+
+        function getStoredProgress() {
+            return JSON.parse(localStorage.getItem('trainingProgress') || '{}');
+        }
+
+        function saveProgress(videoId, completed) {
+            const progress = getStoredProgress();
+            progress[videoId] = completed;
+            localStorage.setItem('trainingProgress', JSON.stringify(progress));
+            updateProgressBar();
+        }
+
+        function generateVideos() {
+            const videos = [];
+            for (const [id, url] of Object.entries(VIDEOS)) {
+                const parts = id.split('-');
+                videos.push({
+                    id,
+                    week: parseInt(parts[0]),
+                    day: parseInt(parts[1]),
+                    type: parts[2],
+                    url
+                });
+            }
+            videos.sort((a, b) => {
+                if (a.week !== b.week) return a.week - b.week;
+                if (a.day !== b.day) return a.day - b.day;
+                // Morning always first
+                if (a.type === 'Morning') return -1;
+                if (b.type === 'Morning') return 1;
+                return a.type.localeCompare(b.type);
+            });
+            return videos;
+        }
+
+        function renderWeeks() {
+            const videos = generateVideos();
+            const progress = getStoredProgress();
+            const weeksContainer = document.getElementById('weeks');
+            weeksContainer.innerHTML = '';
+
+            const weeks = [...new Set(videos.map(v => v.week))].sort((a, b) => a - b);
+
+            for (const week of weeks) {
+                const weekDiv = document.createElement('div');
+                weekDiv.className = 'week';
+                weekDiv.innerHTML = `<h2>Week ${week}</h2>`;
+
+                const days = [...new Set(videos.filter(v => v.week === week).map(v => v.day))].sort((a, b) => a - b);
+
+                for (const day of days) {
+                    const dayVideos = videos.filter(v => v.week === week && v.day === day);
+                    const dayDiv = document.createElement('div');
+                    dayDiv.className = 'day';
+                    dayDiv.innerHTML = `<h3>Day ${day}</h3>`;
+
+                    dayVideos.forEach(video => {
+                        const isCompleted = progress[video.id] || false;
+                        const itemDiv = document.createElement('div');
+                        itemDiv.className = `video-item ${isCompleted ? 'completed' : ''}`;
+                        
+                        itemDiv.innerHTML = `
+                            <input type="checkbox" id="${video.id}" ${isCompleted ? 'checked' : ''}>
+                            <a href="${video.url}" target="_blank">${video.type}</a>
+                        `;
+                        
+                        const checkbox = itemDiv.querySelector('input');
+                        checkbox.addEventListener('change', (e) => {
+                            saveProgress(video.id, e.target.checked);
+                            itemDiv.classList.toggle('completed', e.target.checked);
+                        });
+
+                        dayDiv.appendChild(itemDiv);
+                    });
+
+                    weekDiv.appendChild(dayDiv);
+                }
+
+                weeksContainer.appendChild(weekDiv);
+            }
+        }
+
+        function updateProgressBar() {
+            const videos = generateVideos();
+            const progress = getStoredProgress();
+            const completed = videos.filter(v => progress[v.id]).length;
+            const total = videos.length;
+            const percentage = total > 0 ? (completed / total) * 100 : 0;
+
+            document.getElementById('progressFill').style.width = `${percentage}%`;
+            document.getElementById('progressText').textContent = `${completed} / ${total} completed (${Math.round(percentage)}%)`;
+        }
+
+        function resetProgress() {
+            if (confirm('Are you sure you want to reset all progress?')) {
+                localStorage.removeItem('trainingProgress');
+                renderWeeks();
+                updateProgressBar();
+            }
+        }
+
+        // Initialize
+        renderWeeks();
+        updateProgressBar();
+    </script>
+</body>
+</html>
