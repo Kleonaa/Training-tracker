@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Меню">
+    <meta name="theme-color" content="#10b981">
+    <link rel="manifest" href="meal-manifest.json">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
+    <title>Планировщик меню</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            min-height: 100vh;
+            padding: 20px;
+            padding-bottom: 100px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+        .category {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .category h2 {
+            color: #10b981;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .meal-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-radius: 8px;
+            margin: 0 -8px;
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+        .meal-item:last-child {
+            border-bottom: none;
+        }
+        .meal-item:active {
+            background: #f0fdf4;
+        }
+        .meal-item input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            margin-right: 12px;
+            margin-top: 2px;
+            cursor: pointer;
+            accent-color: #10b981;
+            flex-shrink: 0;
+        }
+        .meal-info {
+            flex: 1;
+        }
+        .meal-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        .meal-ingredients {
+            font-size: 0.85rem;
+            color: #666;
+            line-height: 1.4;
+        }
+        .meal-item.selected {
+            background: #f0fdf4;
+        }
+        .meal-item.selected .meal-name {
+            color: #10b981;
+        }
+        .shopping-list {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .shopping-list h2 {
+            color: #10b981;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .shopping-list ul {
+            list-style: none;
+            padding: 0;
+        }
+        .shopping-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .shopping-list li:last-child {
+            border-bottom: none;
+        }
+        .shopping-list li input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: #10b981;
+        }
+        .shopping-list li.checked {
+            text-decoration: line-through;
+            color: #999;
+        }
+        .empty-state {
+            text-align: center;
+            color: #999;
+            padding: 30px;
+        }
+        .floating-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 100;
+        }
+        .floating-btn:active {
+            transform: translateX(-50%) scale(0.95);
+        }
+        .badge {
+            background: white;
+            color: #10b981;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+        }
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            border: none;
+            background: none;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #666;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .tab.active {
+            background: #10b981;
+            color: white;
+        }
+        .view {
+            display: none;
+        }
+        .view.active {
+            display: block;
+        }
+        .copy-btn {
+            background: #f0fdf4;
+            color: #10b981;
+            border: 2px solid #10b981;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 15px;
+        }
+        .copy-btn:active {
+            background: #10b981;
+            color: white;
+        }
+        .clear-btn {
+            background: #fef2f2;
+            color: #ef4444;
+            border: 2px solid #ef4444;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .selected-meals {
+            background: #f0fdf4;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .selected-meals h3 {
+            color: #10b981;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        .selected-meals-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .selected-meal-tag {
+            background: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: #333;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 200;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍽️ Планировщик меню</h1>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="showView('meals')">Блюда</button>
+            <button class="tab" onclick="showView('shopping')">Список покупок</button>
+        </div>
+
+        <div id="mealsView" class="view active">
+            <div id="categories"></div>
+        </div>
+
+        <div id="shoppingView" class="view">
+            <div id="selectedMealsContainer"></div>
+            <div class="shopping-list">
+                <h2>🛒 Список продуктов</h2>
+                <ul id="shoppingList"></ul>
+                <button class="copy-btn" onclick="copyList()">📋 Скопировать список</button>
+                <button class="clear-btn" onclick="clearSelection()">🗑️ Очистить выбор</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="floatingBtn" class="floating-btn" onclick="showView('shopping')" style="display: none;">
+        Список покупок <span class="badge" id="selectedCount">0</span>
+    </div>
+
+    <div id="toast" class="toast">Список скопирован!</div>
+
+    <script>
+        const MEALS = {
+            "Супы": [
+                { name: "Борщ", ingredients: ["говядина на суп", "свёкла", "картофель", "морковь", "томатная паста", "чеснок", "укроп"] },
+                { name: "Гороховый суп", ingredients: ["горох", "говядина на суп", "копчёности", "картофель", "морковь"] },
+                { name: "Куриный суп", ingredients: ["курица", "картофель", "морковь", "лук", "лапша"] },
+                { name: "Уха по-фински", ingredients: ["рыба", "картофель", "лук-порей", "болгарский перец", "морковь", "сливки", "укроп"] },
+                { name: "Суп с фрикадельками", ingredients: ["фарш", "картофель", "морковь", "рис"] },
+                { name: "Тыквенный суп-пюре", ingredients: ["тыква", "картофель", "морковь", "лук", "сливки"] },
+                { name: "Сырный суп", ingredients: ["бульон", "картофель", "морковь", "лук", "плавленый сыр", "сливки"] }
+            ],
+            "Духовка": [
+                { name: "Мясо по-французски с картошкой", ingredients: ["мясо", "картофель", "лук", "помидор", "сыр тёртый", "майонез"] },
+                { name: "Курица в духовке с картошкой", ingredients: ["курица", "картофель", "помидор", "сыр тёртый", "майонез"] },
+                { name: "Сибасс в духовке", ingredients: ["сибасс"] },
+                { name: "Перец фаршированный", ingredients: ["болгарский перец", "фарш", "рис", "лук", "морковь"] },
+                { name: "Творожник-манник", ingredients: ["творог", "манка", "яйца", "сахар", "масло сливочное"] },
+                { name: "Пицца", ingredients: ["мука", "дрожжи", "томатный соус", "сыр тёртый", "салями"] }
+            ],
+            "Сковорода": [
+                { name: "Шницель куриный", ingredients: ["куриное филе", "яйца", "мука", "панировка"] },
+                { name: "Котлеты", ingredients: ["фарш", "лук", "яйцо", "батон", "молоко"] },
+                { name: "Драники", ingredients: ["картофель", "яйцо", "мука"] },
+                { name: "Бефстроганов", ingredients: ["говядина мякоть", "мука", "сметана"] },
+                { name: "Жареная картошка", ingredients: ["картофель", "свинина"] },
+                { name: "Курица в яйце", ingredients: ["куриное филе", "яйца"] },
+                { name: "Рыба в тесте", ingredients: ["лосось", "мука", "яйцо"] }
+            ],
+            "Паста / рис": [
+                { name: "Паста болоньезе", ingredients: ["фарш", "паста", "томатный соус", "лук", "морковь"] },
+                { name: "Паста с лососем и сливками", ingredients: ["паста", "лосось", "сливки", "сыр тёртый"] },
+                { name: "Паста с фрикадельками", ingredients: ["паста", "фарш", "томаты измельченные", "чеснок", "сливочное масло", "молоко", "майоран", "манка"] },
+                { name: "Паста с креветками", ingredients: ["паста", "креветки", "чеснок", "сливки"] },
+                { name: "Паста с тунцом", ingredients: ["паста", "тунец", "сливки", "лук"] },
+                { name: "Жареный рис с креветками", ingredients: ["рис", "креветки", "яйцо", "соевый соус", "кукуруза", "морковь", "зеленый горошек"] },
+                { name: "Паста с курицей и брокколи", ingredients: ["паста", "курица", "брокколи", "сливки", "сыр тёртый", "чеснок"] }
+            ],
+            "Холодное": [
+                { name: "Солёный лосось с пюре", ingredients: ["лосось", "картофель", "молоко", "сливочное масло"] },
+                { name: "Крабовый салат", ingredients: ["крабовые палочки", "яйца", "кукуруза", "майонез", "огурцы", "рис"] }
+            ],
+            "Минимум усилий": [
+                { name: "Омлет", ingredients: ["яйца", "молоко"] },
+                { name: "Яичница", ingredients: ["яйца"] },
+                { name: "Пельмени", ingredients: ["пельмени"] },
+                { name: "Вареники", ingredients: ["вареники"] },
+                { name: "Творог со сметаной", ingredients: ["творог", "сметана"] },
+                { name: "Макароны с сосисками/нагетсами", ingredients: ["макароны", "сосиски/нагетсы"] },
+                { name: "Гречка с молоком", ingredients: ["гречка", "молоко"] }
+            ]
+        };
+
+        let selectedMeals = JSON.parse(localStorage.getItem('selectedMeals') || '[]');
+        let checkedItems = JSON.parse(localStorage.getItem('checkedItems') || '[]');
+
+        function saveSelection() {
+            localStorage.setItem('selectedMeals', JSON.stringify(selectedMeals));
+            localStorage.setItem('checkedItems', JSON.stringify(checkedItems));
+        }
+
+        function renderCategories() {
+            const container = document.getElementById('categories');
+            container.innerHTML = '';
+
+            for (const [category, meals] of Object.entries(MEALS)) {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'category';
+                
+                const icons = {
+                    'Супы': '🍲',
+                    'Духовка': '🍖',
+                    'Сковорода': '🍳',
+                    'Паста / рис': '🍝',
+                    'Холодное': '🥗',
+                    'Минимум усилий': '⚡'
+                };
+                const icon = icons[category] || '🍽️';
+                categoryDiv.innerHTML = `<h2>${icon} ${category}</h2>`;
+
+                meals.forEach((meal, index) => {
+                    const mealId = `${category}-${index}`;
+                    const isSelected = selectedMeals.includes(mealId);
+                    
+                    const mealDiv = document.createElement('div');
+                    mealDiv.className = `meal-item ${isSelected ? 'selected' : ''}`;
+                    mealDiv.innerHTML = `
+                        <input type="checkbox" id="${mealId}" ${isSelected ? 'checked' : ''}>
+                        <div class="meal-info">
+                            <div class="meal-name">${meal.name}</div>
+                            <div class="meal-ingredients">${meal.ingredients.join(', ')}</div>
+                        </div>
+                    `;
+
+                    mealDiv.addEventListener('click', (e) => {
+                        if (e.target.type !== 'checkbox') {
+                            const checkbox = mealDiv.querySelector('input');
+                            checkbox.checked = !checkbox.checked;
+                            toggleMeal(mealId, checkbox.checked);
+                            mealDiv.classList.toggle('selected', checkbox.checked);
+                        }
+                    });
+
+                    mealDiv.querySelector('input').addEventListener('change', (e) => {
+                        toggleMeal(mealId, e.target.checked);
+                        mealDiv.classList.toggle('selected', e.target.checked);
+                    });
+
+                    categoryDiv.appendChild(mealDiv);
+                });
+
+                container.appendChild(categoryDiv);
+            }
+        }
+
+        function toggleMeal(mealId, isSelected) {
+            if (isSelected) {
+                if (!selectedMeals.includes(mealId)) {
+                    selectedMeals.push(mealId);
+                }
+            } else {
+                selectedMeals = selectedMeals.filter(id => id !== mealId);
+            }
+            saveSelection();
+            updateFloatingBtn();
+        }
+
+        function updateFloatingBtn() {
+            const btn = document.getElementById('floatingBtn');
+            const count = document.getElementById('selectedCount');
+            
+            if (selectedMeals.length > 0) {
+                btn.style.display = 'flex';
+                count.textContent = selectedMeals.length;
+            } else {
+                btn.style.display = 'none';
+            }
+        }
+
+        function getMealByID(mealId) {
+            const [category, index] = mealId.split('-');
+            const categoryName = Object.keys(MEALS).find(c => c === category || mealId.startsWith(c));
+            if (categoryName && MEALS[categoryName][parseInt(index)]) {
+                return MEALS[categoryName][parseInt(index)];
+            }
+            // Fallback: parse properly
+            for (const [cat, meals] of Object.entries(MEALS)) {
+                if (mealId.startsWith(cat)) {
+                    const idx = parseInt(mealId.replace(cat + '-', ''));
+                    if (meals[idx]) return meals[idx];
+                }
+            }
+            return null;
+        }
+
+        function generateShoppingList() {
+            const ingredientCount = {};
+            
+            selectedMeals.forEach(mealId => {
+                const meal = getMealByID(mealId);
+                if (meal) {
+                    meal.ingredients.forEach(ingredient => {
+                        const normalized = ingredient.toLowerCase().trim();
+                        ingredientCount[normalized] = (ingredientCount[normalized] || 0) + 1;
+                    });
+                }
+            });
+
+            return Object.entries(ingredientCount)
+                .sort((a, b) => a[0].localeCompare(b[0], 'ru'))
+                .map(([ingredient, count]) => ({
+                    name: ingredient.charAt(0).toUpperCase() + ingredient.slice(1),
+                    count
+                }));
+        }
+
+        function renderShoppingList() {
+            const container = document.getElementById('shoppingList');
+            const selectedContainer = document.getElementById('selectedMealsContainer');
+            
+            // Render selected meals
+            if (selectedMeals.length > 0) {
+                const mealNames = selectedMeals.map(id => {
+                    const meal = getMealByID(id);
+                    return meal ? meal.name : '';
+                }).filter(Boolean);
+
+                selectedContainer.innerHTML = `
+                    <div class="selected-meals">
+                        <h3>Выбранные блюда:</h3>
+                        <div class="selected-meals-list">
+                            ${mealNames.map(name => `<span class="selected-meal-tag">${name}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                selectedContainer.innerHTML = '';
+            }
+
+            // Render shopping list
+            const items = generateShoppingList();
+            
+            if (items.length === 0) {
+                container.innerHTML = '<div class="empty-state">Выберите блюда, чтобы сформировать список</div>';
+                return;
+            }
+
+            container.innerHTML = items.map(item => {
+                const isChecked = checkedItems.includes(item.name);
+                return `
+                    <li class="${isChecked ? 'checked' : ''}">
+                        <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleItem('${item.name}', this.checked)">
+                        <span>${item.name}${item.count > 1 ? ` (×${item.count})` : ''}</span>
+                    </li>
+                `;
+            }).join('');
+        }
+
+        function toggleItem(name, isChecked) {
+            if (isChecked) {
+                if (!checkedItems.includes(name)) {
+                    checkedItems.push(name);
+                }
+            } else {
+                checkedItems = checkedItems.filter(n => n !== name);
+            }
+            saveSelection();
+            renderShoppingList();
+        }
+
+        function showView(view) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            
+            if (view === 'meals') {
+                document.querySelector('.tab:first-child').classList.add('active');
+                document.getElementById('mealsView').classList.add('active');
+                document.getElementById('floatingBtn').style.display = selectedMeals.length > 0 ? 'flex' : 'none';
+            } else {
+                document.querySelector('.tab:last-child').classList.add('active');
+                document.getElementById('shoppingView').classList.add('active');
+                document.getElementById('floatingBtn').style.display = 'none';
+                renderShoppingList();
+            }
+        }
+
+        function copyList() {
+            const items = generateShoppingList();
+            const text = items.map(item => 
+                `• ${item.name}${item.count > 1 ? ` (×${item.count})` : ''}`
+            ).join('\n');
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Список скопирован!');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showToast('Список скопирован!');
+            });
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        function clearSelection() {
+            if (confirm('Очистить выбранные блюда?')) {
+                selectedMeals = [];
+                checkedItems = [];
+                saveSelection();
+                renderCategories();
+                renderShoppingList();
+                updateFloatingBtn();
+                showView('meals');
+            }
+        }
+
+        // Initialize
+        renderCategories();
+        updateFloatingBtn();
+    </script>
+</body>
+</html>
