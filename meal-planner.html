@@ -564,7 +564,8 @@
 
         function copyList() {
             const items = generateShoppingList();
-            const text = items.map(item => 
+            const uncheckedItems = items.filter(item => !checkedItems.includes(item.name));
+            const text = uncheckedItems.map(item => 
                 `• ${item.name}${item.count > 1 ? ` (×${item.count})` : ''}`
             ).join('\n');
             
