@@ -138,11 +138,7 @@
             color: #999;
             padding: 30px;
         }
-        .floating-btn {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+        .shopping-btn {
             background: linear-gradient(135deg, #10b981 0%, #059669 100%);
             color: white;
             border: none;
@@ -154,11 +150,13 @@
             box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 8px;
-            z-index: 100;
+            width: 100%;
+            margin-top: 20px;
         }
-        .floating-btn:active {
-            transform: translateX(-50%) scale(0.95);
+        .shopping-btn:active {
+            transform: scale(0.98);
         }
         .badge {
             background: white;
@@ -298,6 +296,9 @@
     <div class="container">
         <div id="mealsView" class="view active">
             <div id="categories"></div>
+            <button id="shoppingBtn" class="shopping-btn" onclick="showView('shopping')" style="display: none;">
+                Список покупок <span class="badge" id="selectedCount">0</span>
+            </button>
             <button id="clearBtnMeals" class="clear-btn" onclick="clearSelection()" style="display: none; margin-top: 10px;">🗑️ Очистить выбор</button>
         </div>
 
@@ -312,9 +313,6 @@
         </div>
     </div>
 
-    <div id="floatingBtn" class="floating-btn" onclick="showView('shopping')" style="display: none;">
-        Список покупок <span class="badge" id="selectedCount">0</span>
-    </div>
 
     <div id="toast" class="toast">Список скопирован!</div>
 
@@ -441,11 +439,11 @@
                 selectedMeals = selectedMeals.filter(id => id !== mealId);
             }
             saveSelection();
-            updateFloatingBtn();
+            updateShoppingBtn();
         }
 
-        function updateFloatingBtn() {
-            const btn = document.getElementById('floatingBtn');
+        function updateShoppingBtn() {
+            const btn = document.getElementById('shoppingBtn');
             const count = document.getElementById('selectedCount');
             const clearBtnMeals = document.getElementById('clearBtnMeals');
             
@@ -557,11 +555,9 @@
             if (view === 'meals') {
                 document.querySelector('.tab:first-child').classList.add('active');
                 document.getElementById('mealsView').classList.add('active');
-                document.getElementById('floatingBtn').style.display = selectedMeals.length > 0 ? 'flex' : 'none';
             } else {
                 document.querySelector('.tab:last-child').classList.add('active');
                 document.getElementById('shoppingView').classList.add('active');
-                document.getElementById('floatingBtn').style.display = 'none';
                 renderShoppingList();
             }
         }
@@ -600,14 +596,14 @@
                 saveSelection();
                 renderCategories();
                 renderShoppingList();
-                updateFloatingBtn();
+                updateShoppingBtn();
                 showView('meals');
             }
         }
 
         // Initialize
         renderCategories();
-        updateFloatingBtn();
+        updateShoppingBtn();
     </script>
 </body>
 </html>
