@@ -109,6 +109,26 @@
             color: #999;
             text-decoration: line-through;
         }
+        .favorite-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            margin-left: 8px;
+            font-size: 16px;
+            line-height: 1;
+        }
+        .favorite-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: #667eea;
+            stroke-width: 2;
+            fill: none;
+            transition: fill 0.2s ease;
+        }
+        .favorite-btn.favorited svg {
+            fill: #667eea;
+        }
         .settings {
             background: white;
             border-radius: 12px;
@@ -236,6 +256,16 @@
             return JSON.parse(localStorage.getItem('trainingProgress') || '{}');
         }
 
+        function getStoredFavorites() {
+            return JSON.parse(localStorage.getItem('trainingFavorites') || '{}');
+        }
+
+        function saveFavorite(videoId, isFavorite) {
+            const favorites = getStoredFavorites();
+            favorites[videoId] = isFavorite;
+            localStorage.setItem('trainingFavorites', JSON.stringify(favorites));
+        }
+
         function saveProgress(videoId, completed) {
             const progress = getStoredProgress();
             progress[videoId] = completed;
@@ -287,20 +317,32 @@
                     dayDiv.className = 'day';
                     dayDiv.innerHTML = `<h3>Day ${day}</h3>`;
 
+                    const favorites = getStoredFavorites();
                     dayVideos.forEach(video => {
                         const isCompleted = progress[video.id] || false;
+                        const isFavorite = favorites[video.id] || false;
                         const itemDiv = document.createElement('div');
                         itemDiv.className = `video-item ${isCompleted ? 'completed' : ''}`;
                         
                         itemDiv.innerHTML = `
                             <input type="checkbox" id="${video.id}" ${isCompleted ? 'checked' : ''}>
                             <a href="${video.url}" target="_blank">${video.type}</a>
+                            <button class="favorite-btn ${isFavorite ? 'favorited' : ''}" data-id="${video.id}">
+                                <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                            </button>
                         `;
                         
                         const checkbox = itemDiv.querySelector('input');
                         checkbox.addEventListener('change', (e) => {
                             saveProgress(video.id, e.target.checked);
                             itemDiv.classList.toggle('completed', e.target.checked);
+                        });
+
+                        const favoriteBtn = itemDiv.querySelector('.favorite-btn');
+                        favoriteBtn.addEventListener('click', () => {
+                            const nowFavorite = !favoriteBtn.classList.contains('favorited');
+                            favoriteBtn.classList.toggle('favorited', nowFavorite);
+                            saveFavorite(video.id, nowFavorite);
                         });
 
                         dayDiv.appendChild(itemDiv);
