@@ -129,6 +129,46 @@
         .favorite-btn.favorited svg {
             fill: #667eea;
         }
+        .note-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            margin-left: 4px;
+            font-size: 16px;
+            line-height: 1;
+        }
+        .note-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: #667eea;
+            stroke-width: 2;
+            fill: none;
+        }
+        .note-btn.has-note svg {
+            fill: #667eea;
+        }
+        .note-container {
+            display: none;
+            margin-top: 8px;
+        }
+        .note-container.expanded {
+            display: block;
+        }
+        .note-container textarea {
+            width: 100%;
+            min-height: 60px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 13px;
+            resize: vertical;
+        }
+        .note-container textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
         .settings {
             background: white;
             border-radius: 12px;
@@ -266,6 +306,16 @@
             localStorage.setItem('trainingFavorites', JSON.stringify(favorites));
         }
 
+        function getStoredNotes() {
+            return JSON.parse(localStorage.getItem('trainingNotes') || '{}');
+        }
+
+        function saveNote(videoId, note) {
+            const notes = getStoredNotes();
+            notes[videoId] = note;
+            localStorage.setItem('trainingNotes', JSON.stringify(notes));
+        }
+
         function saveProgress(videoId, completed) {
             const progress = getStoredProgress();
             progress[videoId] = completed;
@@ -324,13 +374,24 @@
                         const itemDiv = document.createElement('div');
                         itemDiv.className = `video-item ${isCompleted ? 'completed' : ''}`;
                         
+                        const notes = getStoredNotes();
+                        const existingNote = notes[video.id] || '';
+                        const hasNote = existingNote.trim().length > 0;
+                        
                         itemDiv.innerHTML = `
                             <input type="checkbox" id="${video.id}" ${isCompleted ? 'checked' : ''}>
                             <a href="${video.url}" target="_blank">${video.type}</a>
                             <button class="favorite-btn ${isFavorite ? 'favorited' : ''}" data-id="${video.id}">
                                 <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                             </button>
+                            <button class="note-btn ${hasNote ? 'has-note' : ''}" data-id="${video.id}">
+                                <svg viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                            </button>
                         `;
+                        
+                        const noteContainerDiv = document.createElement('div');
+                        noteContainerDiv.className = 'note-container';
+                        noteContainerDiv.innerHTML = `<textarea placeholder="Add notes about this training...">${existingNote}</textarea>`;
                         
                         const checkbox = itemDiv.querySelector('input');
                         checkbox.addEventListener('change', (e) => {
@@ -345,7 +406,24 @@
                             saveFavorite(video.id, nowFavorite);
                         });
 
+                        const noteBtn = itemDiv.querySelector('.note-btn');
+                        const noteTextarea = noteContainerDiv.querySelector('textarea');
+                        
+                        noteBtn.addEventListener('click', () => {
+                            noteContainerDiv.classList.toggle('expanded');
+                            if (noteContainerDiv.classList.contains('expanded')) {
+                                noteTextarea.focus();
+                            }
+                        });
+                        
+                        noteTextarea.addEventListener('input', () => {
+                            const noteText = noteTextarea.value;
+                            saveNote(video.id, noteText);
+                            noteBtn.classList.toggle('has-note', noteText.trim().length > 0);
+                        });
+
                         dayDiv.appendChild(itemDiv);
+                        dayDiv.appendChild(noteContainerDiv);
                     });
 
                     weekDiv.appendChild(dayDiv);
