@@ -211,11 +211,40 @@
         .reset-btn:hover {
             background: #ee5a5a;
         }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: rgba(255,255,255,0.3);
+            color: white;
+        }
+        .tab-btn.active {
+            background: white;
+            color: #667eea;
+        }
+        .tab-btn:hover:not(.active) {
+            background: rgba(255,255,255,0.5);
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🏋️ Training Progress</h1>
+        
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="softsuper">Super Power</button>
+            <button class="tab-btn" data-tab="posture">Posture</button>
+        </div>
         
         <div class="progress-container">
             <strong>Overall Progress</strong>
@@ -231,7 +260,9 @@
     </div>
 
     <script>
-        const VIDEOS = {
+        let currentTab = 'softsuper';
+
+        const VIDEOS_SOFTSUPER = {
             "1-1-Morning": "https://drive.google.com/file/d/1-qrHBbq_hWgGVkFut9PUHsY_W3cgnDwG/view",
             "1-1-Soft": "https://drive.google.com/file/d/1c9tt71cr6656KHFM7KOVvHytvuYq560S/view",
             "1-1-Super": "https://drive.google.com/file/d/1TDLo-yIc5-6D3sZwXpUG6P1ZDqcKAALl/view",
@@ -292,40 +323,91 @@
             "3-7-Relax": "https://drive.google.com/file/d/18K3YuI_Ar8ddRR7ZelcqcT-WLZCnVYpl/view"
         };
 
+        const VIDEOS_POSTURE = {
+            "1-1-Full": "https://www.youtube.com/watch?v=sOgYGht5-Ec",
+            "1-1-Short": "https://www.youtube.com/watch?v=Hls0PmzDDrQ",
+            "1-2-Full": "https://www.youtube.com/watch?v=_uEVXutrNKM",
+            "1-2-Short": "https://www.youtube.com/watch?v=ru_esUcHRIY",
+            "1-3-Full (таз и поясница)": "https://www.youtube.com/watch?v=FcWjVHulYdo",
+            "1-3-Short": "https://www.youtube.com/watch?v=usc-N5ojiIE",
+            "1-4-Full (поясница)": "https://www.youtube.com/watch?v=fpOMyJ1XH2c",
+            "1-4-Short": "https://www.youtube.com/watch?v=GxNr1vOcc4U",
+            "1-5-Full": "https://www.youtube.com/watch?v=tNvDL8UjlBE",
+            "1-5-Short": "https://www.youtube.com/watch?v=v25pAaioAzs",
+            "2-1-Full (тазовый и грудной)": "https://www.youtube.com/watch?v=O1IH_Qs5jJI",
+            "2-1-Short": "https://www.youtube.com/watch?v=tu3T_-q8ss4",
+            "2-2-Full (грудной)": "https://www.youtube.com/watch?v=z3meGitsAoY",
+            "2-2-Short": "https://www.youtube.com/watch?v=-inSbOIbY1k",
+            "2-3-Full (грудной)": "https://www.youtube.com/watch?v=vwMSM3ivv0I",
+            "2-3-Short": "https://www.youtube.com/watch?v=vTGWV2xAZRo",
+            "2-4-Full (грудной)": "https://www.youtube.com/watch?v=b3RTYlZOg2s",
+            "2-4-Short": "https://www.youtube.com/watch?v=lWmbB8dDvSg",
+            "2-5-Full": "https://www.youtube.com/watch?v=xuDqwHCzC5w",
+            "2-5-Short": "https://www.youtube.com/shorts/DGekIBVKnAs",
+            "3-1-Full": "https://www.youtube.com/watch?v=YDejIsjx_GE",
+            "3-1-Short": "https://www.youtube.com/watch?v=N7QC9ULnr9g",
+            "3-2-Full": "https://www.youtube.com/watch?v=4CVwlhpbeCE",
+            "3-2-Short": "https://www.youtube.com/shorts/ygRJfOhT9h0",
+            "3-3-Full": "https://www.youtube.com/watch?v=R63S2Xa3Hxw",
+            "3-3-Short": "https://www.youtube.com/shorts/vJI-OPg4C9U",
+            "3-4-Full": "https://www.youtube.com/watch?v=IYaTbNuBzaI",
+            "3-4-Short": "https://www.youtube.com/shorts/uwTkxCCp3CY",
+            "3-5-Full": "https://www.youtube.com/watch?v=dniJcel5xvc",
+            "3-5-Short": "https://www.youtube.com/shorts/Qlu5sQqrKkw",
+            "4-1-Full": "https://www.youtube.com/watch?v=QDX-jIhEQfo",
+            "4-1-Short": "https://www.youtube.com/watch?v=8PCbSHu9ctU",
+            "4-2-Full": "https://www.youtube.com/watch?v=6hN2m5euweI",
+            "4-2-Short": "https://www.youtube.com/watch?v=9WqSMB2FbKY",
+            "4-3-Full": "https://www.youtube.com/watch?v=ibZnTiL4zaQ",
+            "4-3-Short": "https://www.youtube.com/watch?v=8prOESJ5wPw",
+            "4-4-Full": "https://www.youtube.com/watch?v=TfXfgVMKuRk",
+            "4-4-Short": "https://www.youtube.com/watch?v=3ZdalTwMozI",
+            "4-5-Full": "https://www.youtube.com/watch?v=I4QMUg6MySI",
+            "4-5-Short": "https://www.youtube.com/watch?v=2Cb-63Y29v0"
+        };
+
+        function getVideosForTab() {
+            return currentTab === 'softsuper' ? VIDEOS_SOFTSUPER : VIDEOS_POSTURE;
+        }
+
+        function getStorageKey(base) {
+            return `${base}_${currentTab}`;
+        }
+
         function getStoredProgress() {
-            return JSON.parse(localStorage.getItem('trainingProgress') || '{}');
+            return JSON.parse(localStorage.getItem(getStorageKey('trainingProgress')) || '{}');
         }
 
         function getStoredFavorites() {
-            return JSON.parse(localStorage.getItem('trainingFavorites') || '{}');
+            return JSON.parse(localStorage.getItem(getStorageKey('trainingFavorites')) || '{}');
         }
 
         function saveFavorite(videoId, isFavorite) {
             const favorites = getStoredFavorites();
             favorites[videoId] = isFavorite;
-            localStorage.setItem('trainingFavorites', JSON.stringify(favorites));
+            localStorage.setItem(getStorageKey('trainingFavorites'), JSON.stringify(favorites));
         }
 
         function getStoredNotes() {
-            return JSON.parse(localStorage.getItem('trainingNotes') || '{}');
+            return JSON.parse(localStorage.getItem(getStorageKey('trainingNotes')) || '{}');
         }
 
         function saveNote(videoId, note) {
             const notes = getStoredNotes();
             notes[videoId] = note;
-            localStorage.setItem('trainingNotes', JSON.stringify(notes));
+            localStorage.setItem(getStorageKey('trainingNotes'), JSON.stringify(notes));
         }
 
         function saveProgress(videoId, completed) {
             const progress = getStoredProgress();
             progress[videoId] = completed;
-            localStorage.setItem('trainingProgress', JSON.stringify(progress));
+            localStorage.setItem(getStorageKey('trainingProgress'), JSON.stringify(progress));
             updateProgressBar();
         }
 
         function generateVideos() {
             const videos = [];
-            for (const [id, url] of Object.entries(VIDEOS)) {
+            for (const [id, url] of Object.entries(getVideosForTab())) {
                 const parts = id.split('-');
                 videos.push({
                     id,
@@ -338,9 +420,9 @@
             videos.sort((a, b) => {
                 if (a.week !== b.week) return a.week - b.week;
                 if (a.day !== b.day) return a.day - b.day;
-                // Morning always first
-                if (a.type === 'Morning') return -1;
-                if (b.type === 'Morning') return 1;
+                // Full/Morning always first
+                if (a.type === 'Morning' || a.type === 'Full') return -1;
+                if (b.type === 'Morning' || b.type === 'Full') return 1;
                 return a.type.localeCompare(b.type);
             });
             return videos;
@@ -446,13 +528,48 @@
 
         function resetProgress() {
             if (confirm('Are you sure you want to reset all progress?')) {
-                localStorage.removeItem('trainingProgress');
+                localStorage.removeItem(getStorageKey('trainingProgress'));
                 renderWeeks();
                 updateProgressBar();
             }
         }
 
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tab);
+            });
+            renderWeeks();
+            updateProgressBar();
+        }
+
+        // Migrate old data to new tab-specific keys (one-time migration)
+        function migrateOldData() {
+            const oldProgress = localStorage.getItem('trainingProgress');
+            const oldFavorites = localStorage.getItem('trainingFavorites');
+            const oldNotes = localStorage.getItem('trainingNotes');
+            
+            if (oldProgress && !localStorage.getItem('trainingProgress_softsuper')) {
+                localStorage.setItem('trainingProgress_softsuper', oldProgress);
+                localStorage.removeItem('trainingProgress');
+            }
+            if (oldFavorites && !localStorage.getItem('trainingFavorites_softsuper')) {
+                localStorage.setItem('trainingFavorites_softsuper', oldFavorites);
+                localStorage.removeItem('trainingFavorites');
+            }
+            if (oldNotes && !localStorage.getItem('trainingNotes_softsuper')) {
+                localStorage.setItem('trainingNotes_softsuper', oldNotes);
+                localStorage.removeItem('trainingNotes');
+            }
+        }
+
+        // Initialize tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+        });
+
         // Initialize
+        migrateOldData();
         renderWeeks();
         updateProgressBar();
     </script>
