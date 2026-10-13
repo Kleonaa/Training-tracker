@@ -99,6 +99,35 @@
             cursor: pointer;
             accent-color: #667eea;
         }
+        .video-title {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px 8px;
+            min-width: 0;
+        }
+        .duration-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 7px;
+            border-radius: 999px;
+            background: #e9ecfa;
+            color: #535f91;
+            font-size: 11px;
+            font-weight: 500;
+            line-height: 1.5;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+        .duration-badge svg {
+            width: 12px;
+            height: 12px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.7;
+            stroke-linecap: round;
+        }
         .video-item a {
             color: #667eea;
             text-decoration: none;
@@ -379,6 +408,70 @@
             "4-5-Short": "https://www.youtube.com/watch?v=2Cb-63Y29v0"
         };
 
+        // Rounded to the nearest minute from Google Drive Details.
+        const TRAINING_DURATION_MINUTES = {
+            "softsuper": {
+                "1-1-Morning": 9,
+                "1-1-Soft": 15,
+                "1-1-Super": 10,
+                "1-2-Morning": 8,
+                "1-2-Soft": 19,
+                "1-2-Super": 19,
+                "1-3-Morning": 8,
+                "1-3-Soft": 16,
+                "1-3-Super": 12,
+                "1-4-Morning": 8,
+                "1-4-Soft": 18,
+                "1-4-Super": 11,
+                "1-5-Morning": 8,
+                "1-5-Power": 10,
+                "1-5-Soft": 18,
+                "1-6-Morning": 7,
+                "1-6-Stretch": 18,
+                "1-6-Swimmer": 16,
+                "1-7-Steps": 23,
+                "1-7-Surfer": 19,
+                "2-1-Morning": 9,
+                "2-1-Soft": 20,
+                "2-1-Super": 11,
+                "2-2-Morning": 7,
+                "2-2-Soft": 19,
+                "2-2-Super": 11,
+                "2-3-Morning": 8,
+                "2-3-Soft": 18,
+                "2-3-Super": 11,
+                "2-4-Morning": 9,
+                "2-4-Soft": 19,
+                "2-4-Super": 11,
+                "2-5-Morning": 8,
+                "2-5-Soft": 17,
+                "2-5-Super": 11,
+                "2-6-Barre": 20,
+                "2-6-Morning": 6,
+                "2-7-Bonus": 30,
+                "2-7-Steps": 21,
+                "3-1-Morning": 8,
+                "3-1-Soft": 16,
+                "3-1-Super": 10,
+                "3-2-Morning": 7,
+                "3-2-Soft": 19,
+                "3-2-Super": 11,
+                "3-3-Morning": 8,
+                "3-3-Soft": 17,
+                "3-3-Super": 11,
+                "3-4-Morning": 8,
+                "3-4-Soft": 19,
+                "3-4-Super": 11,
+                "3-5-Morning": 8,
+                "3-5-Soft": 20,
+                "3-5-Super": 11,
+                "3-6-Final": 21,
+                "3-6-Morning": 9,
+                "3-7-Relax": 65,
+                "3-7-Steps": 20
+            }
+        };
+
         const TRAINING_DESCRIPTIONS = {
             softsuper: {
                 "1-3-Super": "Гантели. На спину, руки, немного пресса"
@@ -484,10 +577,19 @@
                         const defaultNote = (TRAINING_DESCRIPTIONS[currentTab]?.[video.id] ?? '').trim();
                         const existingNote = (notes[video.id] ?? '').trim() || defaultNote;
                         const hasNote = existingNote.trim().length > 0;
+                        const durationMinutes = TRAINING_DURATION_MINUTES[currentTab]?.[video.id];
+                        const durationBadge = durationMinutes ? `
+                            <span class="duration-badge" aria-label="Длительность: около ${durationMinutes} мин">
+                                <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/></svg>
+                                ${durationMinutes} мин
+                            </span>` : '';
                         
                         itemDiv.innerHTML = `
                             <input type="checkbox" id="${video.id}" ${isCompleted ? 'checked' : ''}>
-                            <a href="${video.url}" target="_blank">${video.type}</a>
+                            <div class="video-title">
+                                <a href="${video.url}" target="_blank">${video.type}</a>
+                                ${durationBadge}
+                            </div>
                             <button class="favorite-btn ${isFavorite ? 'favorited' : ''}" data-id="${video.id}">
                                 <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                             </button>
