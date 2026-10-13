@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Training">
@@ -266,6 +266,25 @@
         .import-preview { margin-top: 12px; border-top: 1px solid #eee; padding-top: 12px; }
         .data-tools select { max-width: 100%; margin-bottom: 8px; }
         .data-tools .data-error { color: #a52626; }
+        [hidden] { display: none !important; }
+        .course-filters { background: white; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+        .course-filters input { width: 100%; padding: 10px; border: 1px solid #d9def2; border-radius: 8px; margin: 6px 0 12px; font: inherit; }
+        .filter-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 12px; }
+        .filter-row button, .bc-next { border: 1px solid #d9def2; border-radius: 8px; background: #f4f6ff; color: #435386; padding: 7px 10px; cursor: pointer; }
+        .filter-row button.active { background: #667eea; color: white; border-color: #667eea; }
+        .bc-extra { grid-column: 2 / -1; min-width: 0; font-size: 13px; color: #555; }
+        .bc-extra p { margin: 5px 0; line-height: 1.5; }
+        .bc-extra summary { cursor: pointer; color: #535f91; padding: 6px 0; }
+        .bc-full { white-space: pre-line; overflow-wrap: anywhere; }
+        #bcStats { color: #555; font-size: 13px; margin-top: 12px; }
+        .empty-courses { background: white; padding: 20px; border-radius: 12px; text-align: center; }
+        @media (max-width: 520px) {
+            body { padding: 12px; }
+            .tab-btn { padding: 10px 6px !important; font-size: 13px !important; }
+            .tabs { gap: 6px !important; }
+            .week { padding: 12px; }
+            .day { padding: 10px; }
+        }
         .tabs {
             display: flex;
             gap: 10px;
@@ -294,32 +313,43 @@
 </head>
 <body>
     <div class="container">
-        <h1>🏋️ Training Progress</h1>
+        <h1>🏋️ Мои тренировки</h1>
         
         <div class="tabs">
             <button class="tab-btn active" data-tab="softsuper">Super Power</button>
             <button class="tab-btn" data-tab="posture">Posture</button>
+            <button class="tab-btn" data-tab="bc2026">BC 2026</button>
         </div>
         
         <div class="progress-container">
-            <strong>Overall Progress</strong>
+            <strong id="courseProgressLabel">Прогресс · Super Power</strong>
             <div class="progress-bar">
                 <div class="progress-fill" id="progressFill"></div>
             </div>
             <div class="progress-text" id="progressText">0 / 0 completed</div>
         </div>
 
+        <section id="bcFilters" class="course-filters" aria-label="Фильтры BC 2026" hidden>
+            <label for="bcSearch">Поиск по тренировкам</label>
+            <input id="bcSearch" type="search" placeholder="тренер, мышцы, упражнение...">
+            <p>Неделя</p><div id="bcWeekFilters" class="filter-row" role="group" aria-label="Неделя"></div>
+            <p>Тип</p><div id="bcTypeFilters" class="filter-row" role="group" aria-label="Тип"></div>
+            <p>Статус</p><div id="bcStatusFilters" class="filter-row" role="group" aria-label="Статус"></div>
+            <button id="bcNext" class="bc-next" type="button">Следующая тренировка</button>
+            <p id="bcStats" role="status"></p>
+        </section>
         <div id="weeks"></div>
+        <p id="emptyCourses" class="empty-courses" hidden>По этим фильтрам тренировок нет.</p>
 
         <details class="settings data-tools">
             <summary>Перенос и резервная копия данных</summary>
-            <p>Прогресс, избранное и ваши комментарии из Super Power и Posture. Файл сохраняется на ваше устройство.</p>
+            <p>Прогресс, избранное и ваши комментарии из Super Power, Posture и BC 2026. Файл сохраняется на ваше устройство.</p>
             <label for="exportScope">Что экспортировать</label>
             <select id="exportScope">
                 <option value="all">Все мои данные</option>
                 <option value="comments">Только мои комментарии</option>
             </select>
-            <p>Комментарии можно отправить другу для добавления в описания тренировок. В этот файл попадут только ваши непустые локальные комментарии из обеих вкладок.</p>
+            <p>Комментарии можно отправить другу для добавления в описания тренировок. В этот файл попадут только ваши непустые локальные комментарии из всех курсов.</p>
             <div class="data-actions">
                 <button type="button" id="exportData">Экспорт JSON</button>
                 <button type="button" id="chooseImport">Импорт из файла</button>
@@ -330,7 +360,7 @@
                 <label for="importMode">Как добавить данные</label>
                 <select id="importMode">
                     <option value="merge">Объединить с текущими</option>
-                    <option value="replace" id="replaceImportLabel">Полностью заменить обе вкладки</option>
+                    <option value="replace" id="replaceImportLabel">Полностью заменить курсы из файла</option>
                 </select>
                 <p>При объединении совпадающие записи берутся из файла. При замене сначала скачается резервная копия текущих данных.</p>
                 <div class="data-actions">
@@ -341,9 +371,10 @@
             <p id="dataStatus" role="status" aria-live="polite"></p>
         </details>
 
-        <button class="reset-btn" onclick="resetProgress()">Reset All Progress</button>
+        <button class="reset-btn" onclick="resetProgress()">Сбросить прогресс этого курса</button>
     </div>
 
+    <script src="courses/bc2026-data.js?v=20261013"></script>
     <script>
         let currentTab = 'softsuper';
 
@@ -521,8 +552,75 @@
             }
         };
 
+        const BC_TRAININGS = window.SEKTA_TRAINING_DATA.days.flatMap(day => day.items);
+        const VIDEOS_BC2026 = Object.fromEntries(BC_TRAININGS.map(t => [t.id, t.videoUrl]));
+        const COURSE_VIDEOS = { softsuper: VIDEOS_SOFTSUPER, posture: VIDEOS_POSTURE, bc2026: VIDEOS_BC2026 };
+        const COURSE_NAMES = { softsuper: 'Super Power', posture: 'Posture', bc2026: 'BC 2026' };
+        const bcFilters = { week: 'all', type: 'all', status: 'all', query: '' };
+
         function getVideosForTab() {
-            return currentTab === 'softsuper' ? VIDEOS_SOFTSUPER : VIDEOS_POSTURE;
+            return COURSE_VIDEOS[currentTab];
+        }
+
+        function matchesBCFilters(training) {
+            if (bcFilters.week !== 'all' && String(training.week) !== bcFilters.week) return false;
+            if (bcFilters.type === 'dumbbells') {
+                if (!/гантел/iu.test([training.equipment, training.summary, training.description].join(' '))) return false;
+            } else if (bcFilters.type !== 'all' && training.title !== bcFilters.type) return false;
+            const progress = getStoredProgress();
+            if (bcFilters.status === 'done' && !progress[training.id]) return false;
+            if (bcFilters.status === 'open' && progress[training.id]) return false;
+            if (bcFilters.status === 'favorites' && !getStoredFavorites()[training.id]) return false;
+            const text = [training.title, training.coach, training.equipment, training.summary, training.description, ...(training.muscles || [])].join(' ').toLowerCase();
+            return !bcFilters.query || text.includes(bcFilters.query);
+        }
+
+        function renderBCFilters() {
+            const types = [...new Set(BC_TRAININGS.map(t => t.title))];
+            types.splice(types.indexOf('Основная') + 1, 0, 'dumbbells');
+            const groups = {
+                week: [['all', 'Все'], ...[...new Set(BC_TRAININGS.map(t => t.week))].map(w => [String(w), `Неделя ${w}`])],
+                type: [['all', 'Все'], ...types.map(t => [t, t === 'dumbbells' ? 'Гантели' : t])],
+                status: [['all', 'Все'], ['open', 'Не сделано'], ['done', 'Сделано'], ['favorites', 'Любимые']]
+            };
+            for (const [field, options] of Object.entries(groups)) {
+                const id = {week: 'bcWeekFilters', type: 'bcTypeFilters', status: 'bcStatusFilters'}[field];
+                const group = document.getElementById(id);
+                group.replaceChildren();
+                for (const [value, label] of options) {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.textContent = label;
+                    button.classList.toggle('active', bcFilters[field] === value);
+                    button.setAttribute('aria-pressed', String(bcFilters[field] === value));
+                    button.addEventListener('click', () => { bcFilters[field] = value; renderBCFilters(); renderWeeks(); });
+                    group.appendChild(button);
+                }
+            }
+        }
+
+        function appendBCDetails(item, video) {
+            const extra = document.createElement('div');
+            extra.className = 'bc-extra';
+            const equipment = (video.equipment || '').split('·')
+                .map(item => item.trim())
+                .filter(item => item && item.toLowerCase() !== 'без кроссовок')
+                .join(' · ');
+            for (const [label, text] of [['Тренер', video.coach], ['Оборудование', equipment], ['Мышцы', (video.muscles || []).join(', ')]]) {
+                if (!text) continue;
+                const line = document.createElement('p');
+                line.textContent = `${label}: ${text}`;
+                extra.appendChild(line);
+            }
+            const details = document.createElement('details');
+            const summary = document.createElement('summary');
+            summary.textContent = 'Полное описание';
+            const full = document.createElement('p');
+            full.className = 'bc-full';
+            full.textContent = video.description || video.summary || 'Описание пока не добавлено.';
+            details.append(summary, full);
+            extra.appendChild(details);
+            item.appendChild(extra);
         }
 
         function getStorageKey(base) {
@@ -582,6 +680,7 @@
         }
 
         function generateVideos() {
+            if (currentTab === 'bc2026') return BC_TRAININGS.map(t => ({ ...t, type: t.title, url: t.videoUrl }));
             const videos = [];
             for (const [id, url] of Object.entries(getVideosForTab())) {
                 const parts = id.split('-');
@@ -605,7 +704,12 @@
         }
 
         function renderWeeks() {
-            const videos = generateVideos();
+            const videos = generateVideos().filter(v => currentTab !== 'bc2026' || matchesBCFilters(v));
+            document.getElementById('emptyCourses').hidden = videos.length > 0;
+            if (currentTab === 'bc2026') {
+                const minutes = videos.reduce((total, t) => total + t.duration.split(':').reduce((sum, part) => sum * 60 + Number(part), 0) / 60, 0);
+                document.getElementById('bcStats').textContent = `Показано: ${videos.length} · Видео: ${videos.filter(t => t.url).length} · Время: ${Math.round(minutes)} мин`;
+            }
             const progress = getStoredProgress();
             const weeksContainer = document.getElementById('weeks');
             weeksContainer.innerHTML = '';
@@ -615,7 +719,7 @@
             for (const week of weeks) {
                 const weekDiv = document.createElement('div');
                 weekDiv.className = 'week';
-                weekDiv.innerHTML = `<h2>Week ${week}</h2>`;
+                weekDiv.innerHTML = `<h2>Неделя ${week}</h2>`;
 
                 const days = [...new Set(videos.filter(v => v.week === week).map(v => v.day))].sort((a, b) => a - b);
 
@@ -623,7 +727,7 @@
                     const dayVideos = videos.filter(v => v.week === week && v.day === day);
                     const dayDiv = document.createElement('div');
                     dayDiv.className = 'day';
-                    dayDiv.innerHTML = `<h3>Day ${day}</h3>`;
+                    dayDiv.innerHTML = `<h3>День ${day}</h3>`;
 
                     const favorites = getStoredFavorites();
                     dayVideos.forEach(video => {
@@ -631,12 +735,13 @@
                         const isFavorite = favorites[video.id] || false;
                         const itemDiv = document.createElement('div');
                         itemDiv.className = `video-item ${isCompleted ? 'completed' : ''}`;
+                        itemDiv.dataset.trainingId = video.id;
                         
                         const notes = getStoredNotes();
-                        const defaultNote = (TRAINING_DESCRIPTIONS[currentTab]?.[video.id] ?? '').trim();
+                        const defaultNote = (TRAINING_DESCRIPTIONS[currentTab]?.[video.id] ?? video.summary ?? '').trim();
                         const existingNote = (notes[video.id] ?? '').trim() || defaultNote;
                         const hasNote = existingNote.trim().length > 0;
-                        const durationMinutes = TRAINING_DURATION_MINUTES[currentTab]?.[video.id];
+                        const durationMinutes = currentTab === 'bc2026' ? Math.round(video.duration.split(':').reduce((sum, part) => sum * 60 + Number(part), 0) / 60) : TRAINING_DURATION_MINUTES[currentTab]?.[video.id];
                         const durationBadge = durationMinutes ? `
                             <span class="duration-badge" aria-label="Длительность: около ${durationMinutes} мин">
                                 <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/></svg>
@@ -657,6 +762,14 @@
                             </button>
                         `;
                         
+                        const videoLink = itemDiv.querySelector('.video-title a');
+                        if (!video.url) {
+                            videoLink.removeAttribute('href');
+                            videoLink.removeAttribute('target');
+                            videoLink.textContent = `${video.type} · видео позже`;
+                        }
+                        itemDiv.querySelector('input').setAttribute('aria-label', `Выполнено: ${video.type}, неделя ${video.week}, день ${video.day}`);
+                        itemDiv.querySelector('.favorite-btn').setAttribute('aria-label', `В избранное: ${video.type}`);
                         const noteContainerDiv = document.createElement('div');
                         noteContainerDiv.className = 'note-container';
                         const noteTextarea = document.createElement('textarea');
@@ -674,6 +787,7 @@
                         checkbox.addEventListener('change', (e) => {
                             saveProgress(video.id, e.target.checked);
                             itemDiv.classList.toggle('completed', e.target.checked);
+                            if (currentTab === 'bc2026') renderWeeks();
                         });
 
                         const favoriteBtn = itemDiv.querySelector('.favorite-btn');
@@ -681,6 +795,7 @@
                             const nowFavorite = !favoriteBtn.classList.contains('favorited');
                             favoriteBtn.classList.toggle('favorited', nowFavorite);
                             saveFavorite(video.id, nowFavorite);
+                            if (currentTab === 'bc2026' && bcFilters.status === 'favorites') renderWeeks();
                         });
 
                         const noteBtn = itemDiv.querySelector('.note-btn');
@@ -710,6 +825,7 @@
 
                         itemDiv.appendChild(descriptionElement);
                         itemDiv.appendChild(noteContainerDiv);
+                        if (currentTab === 'bc2026') appendBCDetails(itemDiv, video);
                         dayDiv.appendChild(itemDiv);
                     });
 
@@ -728,11 +844,11 @@
             const percentage = total > 0 ? (completed / total) * 100 : 0;
 
             document.getElementById('progressFill').style.width = `${percentage}%`;
-            document.getElementById('progressText').textContent = `${completed} / ${total} completed (${Math.round(percentage)}%)`;
+            document.getElementById('progressText').textContent = `${completed} / ${total} выполнено (${Math.round(percentage)}%)`;
         }
 
         function resetProgress() {
-            if (confirm('Are you sure you want to reset all progress?')) {
+            if (confirm(`Сбросить прогресс курса ${COURSE_NAMES[currentTab]}?`)) {
                 localStorage.removeItem(getStorageKey('trainingProgress'));
                 renderWeeks();
                 updateProgressBar();
@@ -741,6 +857,8 @@
 
         function switchTab(tab) {
             currentTab = tab;
+            document.getElementById('bcFilters').hidden = tab !== 'bc2026';
+            document.getElementById('courseProgressLabel').textContent = `Прогресс · ${COURSE_NAMES[tab]}`;
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.tab === tab);
             });
@@ -768,7 +886,7 @@
             }
         }
 
-        const DATA_TABS = ['softsuper', 'posture'];
+        const DATA_TABS = ['softsuper', 'posture', 'bc2026'];
         const DATA_FIELDS = { progress: 'trainingProgress', favorites: 'trainingFavorites', notes: 'trainingNotes' };
         let pendingImport = null;
         let importReadVersion = 0;
@@ -801,10 +919,11 @@
             if (!['all', 'comments'].includes(scope)) throw new Error('Неизвестный тип экспорта.');
             const fields = scope === 'comments' ? ['notes'] : Object.keys(DATA_FIELDS);
             const tabs = {};
-            for (const tab of DATA_TABS) {
+            if (!Object.keys(value.tabs).length || Object.keys(value.tabs).some(tab => !DATA_TABS.includes(tab))) throw new Error('Неизвестный курс или пустой файл.');
+            for (const tab of Object.keys(value.tabs)) {
                 if (!isRecord(value.tabs[tab])) throw new Error('В файле отсутствуют данные одной из вкладок.');
                 tabs[tab] = {};
-                const videos = tab === 'softsuper' ? VIDEOS_SOFTSUPER : VIDEOS_POSTURE;
+                const videos = COURSE_VIDEOS[tab];
                 for (const field of fields) {
                     const records = value.tabs[tab][field];
                     if (!isRecord(records)) throw new Error('Некорректный раздел данных: ' + field);
@@ -840,7 +959,7 @@
         function writeImportedTabs(incoming, mode) {
             const before = [];
             const updates = [];
-            for (const tab of DATA_TABS) {
+            for (const tab of Object.keys(incoming)) {
                 for (const [field, prefix] of Object.entries(DATA_FIELDS)) {
                     if (!Object.hasOwn(incoming[tab], field)) continue;
                     const key = `${prefix}_${tab}`;
@@ -894,16 +1013,16 @@
                 if (readVersion !== importReadVersion) return;
                 pendingImport = tabs;
                 const counts = { progress: 0, favorites: 0, notes: 0 };
-                for (const tab of DATA_TABS) {
+                for (const tab of Object.keys(tabs)) {
                     for (const field of Object.keys(counts)) counts[field] += Object.values(tabs[tab][field] || {}).filter(Boolean).length;
                 }
-                const commentsOnly = !Object.hasOwn(tabs.softsuper, 'progress');
+                const commentsOnly = !Object.hasOwn(Object.values(tabs)[0], 'progress');
                 document.getElementById('importSummary').textContent = commentsOnly
-                    ? `${file.name}: комментарии — ${counts.notes}. Только комментарии обеих вкладок; прогресс и избранное не изменятся.`
-                    : `${file.name}: выполнено — ${counts.progress}, избранное — ${counts.favorites}, комментарии — ${counts.notes}. Обе вкладки.`;
+                    ? `${file.name}: комментарии — ${counts.notes}. Только комментарии курсов из файла; прогресс и избранное не изменятся.`
+                    : `${file.name}: выполнено — ${counts.progress}, избранное — ${counts.favorites}, комментарии — ${counts.notes}. Курсы: ${Object.keys(tabs).map(tab => COURSE_NAMES[tab]).join(', ')}.`;
                 document.getElementById('replaceImportLabel').textContent = commentsOnly
-                    ? 'Заменить только комментарии обеих вкладок'
-                    : 'Полностью заменить обе вкладки';
+                    ? 'Заменить только комментарии курсов из файла'
+                    : 'Полностью заменить курсы из файла';
                 document.getElementById('importMode').value = 'merge';
                 document.getElementById('importPreview').hidden = false;
                 dataStatus('Файл проверен. Выберите способ импорта.');
@@ -916,18 +1035,34 @@
         document.getElementById('applyImport').addEventListener('click', () => {
             if (!pendingImport) return;
             const mode = document.getElementById('importMode').value;
-            const commentsOnly = !Object.hasOwn(pendingImport.softsuper, 'progress');
+            const commentsOnly = !Object.hasOwn(Object.values(pendingImport)[0], 'progress');
             const replacement = commentsOnly ? 'только комментарии' : 'прогресс, избранное и комментарии';
-            if (mode === 'replace' && !confirm(`Заменить ${replacement} обеих вкладок? Перед заменой будет скачана резервная копия.`)) return;
+            if (mode === 'replace' && !confirm(`Заменить ${replacement} курсов из файла? Перед заменой будет скачана резервная копия.`)) return;
             try {
                 if (mode === 'replace') downloadBackup(readBackup(), 'training-tracker-before-import');
                 writeImportedTabs(pendingImport, mode);
                 cancelImport();
                 renderWeeks();
                 updateProgressBar();
-                dataStatus(commentsOnly ? 'Комментарии импортированы. Прогресс и избранное сохранены.' : 'Данные обеих вкладок импортированы.');
+                dataStatus(commentsOnly ? 'Комментарии импортированы. Прогресс и избранное сохранены.' : 'Данные курсов из файла импортированы.');
             } catch (error) { dataStatus('Не удалось импортировать данные: ' + error.message, true); }
         });
+
+        document.getElementById('bcSearch').addEventListener('input', event => {
+            bcFilters.query = event.target.value.trim().toLowerCase();
+            renderWeeks();
+        });
+        document.getElementById('bcNext').addEventListener('click', () => {
+            const progress = getStoredProgress();
+            const next = BC_TRAININGS.find(t => !progress[t.id]);
+            if (!next) { document.getElementById('bcStats').textContent = 'Все тренировки курса выполнены!'; return; }
+            Object.assign(bcFilters, { week: String(next.week), type: 'all', status: 'all', query: '' });
+            document.getElementById('bcSearch').value = '';
+            renderBCFilters();
+            renderWeeks();
+            document.querySelector(`[data-training-id="${CSS.escape(next.id)}"]`)?.scrollIntoView({behavior: 'smooth', block: 'center'});
+        });
+        renderBCFilters();
 
         // Initialize tabs
         document.querySelectorAll('.tab-btn').forEach(btn => {
