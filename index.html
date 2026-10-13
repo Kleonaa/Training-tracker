@@ -376,6 +376,7 @@
 
     <script src="courses/bc2026-data.js?v=20261013"></script>
     <script>
+        const LAST_COURSE_KEY = 'trainingTracker.lastCourse';
         let currentTab = 'softsuper';
 
         const VIDEOS_SOFTSUPER = {
@@ -856,7 +857,9 @@
         }
 
         function switchTab(tab) {
+            if (!Object.hasOwn(COURSE_VIDEOS, tab)) tab = 'softsuper';
             currentTab = tab;
+            try { localStorage.setItem(LAST_COURSE_KEY, tab); } catch { /* Selection still works without storage. */ }
             document.getElementById('bcFilters').hidden = tab !== 'bc2026';
             document.getElementById('courseProgressLabel').textContent = `Прогресс · ${COURSE_NAMES[tab]}`;
             document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -1072,8 +1075,9 @@
         // Initialize
         migrateOldData();
         cleanStoredNotes();
-        renderWeeks();
-        updateProgressBar();
+        let lastCourse = 'softsuper';
+        try { lastCourse = localStorage.getItem(LAST_COURSE_KEY) || lastCourse; } catch { /* Use the default course. */ }
+        switchTab(lastCourse);
     </script>
 </body>
 </html>
