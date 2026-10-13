@@ -253,6 +253,19 @@
         .reset-btn:hover {
             background: #ee5a5a;
         }
+        .data-tools { margin-top: 20px; }
+        .data-tools summary { cursor: pointer; font-weight: 600; color: #535f91; }
+        .data-tools p { margin: 10px 0; color: #555; font-size: 13px; line-height: 1.5; }
+        .data-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .data-actions button, .data-tools select {
+            padding: 8px 12px; border: 1px solid #d9def2; border-radius: 8px;
+            background: #f4f6ff; color: #435386; font: inherit; font-size: 13px;
+        }
+        .data-actions button { cursor: pointer; }
+        .data-actions button:disabled { opacity: .5; cursor: default; }
+        .import-preview { margin-top: 12px; border-top: 1px solid #eee; padding-top: 12px; }
+        .data-tools select { max-width: 100%; margin-bottom: 8px; }
+        .data-tools .data-error { color: #a52626; }
         .tabs {
             display: flex;
             gap: 10px;
@@ -297,6 +310,36 @@
         </div>
 
         <div id="weeks"></div>
+
+        <details class="settings data-tools">
+            <summary>Перенос и резервная копия данных</summary>
+            <p>Прогресс, избранное и ваши комментарии из Super Power и Posture. Файл сохраняется на ваше устройство.</p>
+            <label for="exportScope">Что экспортировать</label>
+            <select id="exportScope">
+                <option value="all">Все мои данные</option>
+                <option value="comments">Только мои комментарии</option>
+            </select>
+            <p>Комментарии можно отправить другу для добавления в описания тренировок. В этот файл попадут только ваши непустые локальные комментарии из обеих вкладок.</p>
+            <div class="data-actions">
+                <button type="button" id="exportData">Экспорт JSON</button>
+                <button type="button" id="chooseImport">Импорт из файла</button>
+            </div>
+            <input type="file" id="importFile" accept=".json,application/json" hidden>
+            <div class="import-preview" id="importPreview" hidden>
+                <p id="importSummary"></p>
+                <label for="importMode">Как добавить данные</label>
+                <select id="importMode">
+                    <option value="merge">Объединить с текущими</option>
+                    <option value="replace" id="replaceImportLabel">Полностью заменить обе вкладки</option>
+                </select>
+                <p>При объединении совпадающие записи берутся из файла. При замене сначала скачается резервная копия текущих данных.</p>
+                <div class="data-actions">
+                    <button type="button" id="applyImport">Импортировать</button>
+                    <button type="button" id="cancelImport">Отмена</button>
+                </div>
+            </div>
+            <p id="dataStatus" role="status" aria-live="polite"></p>
+        </details>
 
         <button class="reset-btn" onclick="resetProgress()">Reset All Progress</button>
     </div>
@@ -500,8 +543,24 @@
             localStorage.setItem(getStorageKey('trainingFavorites'), JSON.stringify(favorites));
         }
 
+        function normalizeNotes(notes) {
+            return Object.fromEntries(Object.entries(notes)
+                .filter(([, text]) => typeof text === 'string' && text.trim())
+                .map(([id, text]) => [id, text.trim()]));
+        }
+
+        function cleanStoredNotes() {
+            for (const tab of DATA_TABS) {
+                const key = `trainingNotes_${tab}`;
+                const raw = localStorage.getItem(key);
+                if (raw === null) continue;
+                const cleaned = JSON.stringify(normalizeNotes(JSON.parse(raw)));
+                if (cleaned !== raw) localStorage.setItem(key, cleaned);
+            }
+        }
+
         function getStoredNotes() {
-            return JSON.parse(localStorage.getItem(getStorageKey('trainingNotes')) || '{}');
+            return normalizeNotes(JSON.parse(localStorage.getItem(getStorageKey('trainingNotes')) || '{}'));
         }
 
         function saveNote(videoId, note) {
@@ -709,6 +768,167 @@
             }
         }
 
+        const DATA_TABS = ['softsuper', 'posture'];
+        const DATA_FIELDS = { progress: 'trainingProgress', favorites: 'trainingFavorites', notes: 'trainingNotes' };
+        let pendingImport = null;
+        let importReadVersion = 0;
+
+        function dataStatus(message, error = false) {
+            const status = document.getElementById('dataStatus');
+            status.textContent = message;
+            status.classList.toggle('data-error', error);
+        }
+
+        function readBackup(scope = 'all') {
+            const tabs = {};
+            for (const tab of DATA_TABS) {
+                tabs[tab] = {};
+                for (const [field, prefix] of Object.entries(DATA_FIELDS)) {
+                    if (scope === 'comments' && field !== 'notes') continue;
+                    const records = JSON.parse(localStorage.getItem(`${prefix}_${tab}`) || '{}');
+                    tabs[tab][field] = field === 'notes' ? normalizeNotes(records) : records;
+                }
+            }
+            return { app: 'training-tracker', version: 1, scope, exportedAt: new Date().toISOString(), tabs };
+        }
+
+        function validateBackup(value) {
+            const isRecord = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+            if (!isRecord(value) || value.app !== 'training-tracker' || value.version !== 1 || !isRecord(value.tabs)) {
+                throw new Error('Выберите JSON-файл экспорта Training Tracker версии 1.');
+            }
+            const scope = value.scope ?? 'all';
+            if (!['all', 'comments'].includes(scope)) throw new Error('Неизвестный тип экспорта.');
+            const fields = scope === 'comments' ? ['notes'] : Object.keys(DATA_FIELDS);
+            const tabs = {};
+            for (const tab of DATA_TABS) {
+                if (!isRecord(value.tabs[tab])) throw new Error('В файле отсутствуют данные одной из вкладок.');
+                tabs[tab] = {};
+                const videos = tab === 'softsuper' ? VIDEOS_SOFTSUPER : VIDEOS_POSTURE;
+                for (const field of fields) {
+                    const records = value.tabs[tab][field];
+                    if (!isRecord(records)) throw new Error('Некорректный раздел данных: ' + field);
+                    tabs[tab][field] = {};
+                    for (const [id, entry] of Object.entries(records)) {
+                        if (!Object.hasOwn(videos, id)) throw new Error('Неизвестная тренировка в файле: ' + id);
+                        if (typeof entry !== (field === 'notes' ? 'string' : 'boolean')) {
+                            throw new Error('Неверный формат записи: ' + id);
+                        }
+                        if (field === 'notes') {
+                            if (entry.trim()) tabs[tab][field][id] = entry.trim();
+                        } else {
+                            tabs[tab][field][id] = entry;
+                        }
+                    }
+                }
+            }
+            return tabs;
+        }
+
+        function downloadBackup(backup, prefix = 'training-tracker') {
+            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${prefix}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+        }
+
+        function writeImportedTabs(incoming, mode) {
+            const before = [];
+            const updates = [];
+            for (const tab of DATA_TABS) {
+                for (const [field, prefix] of Object.entries(DATA_FIELDS)) {
+                    if (!Object.hasOwn(incoming[tab], field)) continue;
+                    const key = `${prefix}_${tab}`;
+                    const raw = localStorage.getItem(key);
+                    before.push([key, raw]);
+                    const merged = mode === 'merge' ? { ...JSON.parse(raw || '{}'), ...incoming[tab][field] } : incoming[tab][field];
+                    updates.push([key, JSON.stringify(field === 'notes' ? normalizeNotes(merged) : merged)]);
+                }
+            }
+            try {
+                for (const [key, value] of updates) localStorage.setItem(key, value);
+            } catch (error) {
+                for (const [key, value] of before) {
+                    if (value === null) localStorage.removeItem(key);
+                    else localStorage.setItem(key, value);
+                }
+                throw error;
+            }
+        }
+
+        function cancelImport() {
+            importReadVersion++;
+            pendingImport = null;
+            document.getElementById('importPreview').hidden = true;
+            document.getElementById('importFile').value = '';
+        }
+
+        document.getElementById('exportData').addEventListener('click', () => {
+            try {
+                const scope = document.getElementById('exportScope').value;
+                downloadBackup(readBackup(scope), scope === 'comments' ? 'training-tracker-comments' : 'training-tracker');
+                dataStatus('Файл экспорта передан браузеру для скачивания.');
+            } catch (error) { dataStatus('Не удалось экспортировать данные: ' + error.message, true); }
+        });
+        document.getElementById('chooseImport').addEventListener('click', () => {
+            cancelImport();
+            dataStatus('');
+            document.getElementById('importFile').click();
+        });
+        document.getElementById('cancelImport').addEventListener('click', () => {
+            cancelImport();
+            dataStatus('Импорт отменён.');
+        });
+        document.getElementById('importFile').addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            const readVersion = ++importReadVersion;
+            if (!file) return;
+            try {
+                if (file.size > 5 * 1024 * 1024) throw new Error('Файл слишком большой (максимум 5 МБ).');
+                const tabs = validateBackup(JSON.parse(await file.text()));
+                if (readVersion !== importReadVersion) return;
+                pendingImport = tabs;
+                const counts = { progress: 0, favorites: 0, notes: 0 };
+                for (const tab of DATA_TABS) {
+                    for (const field of Object.keys(counts)) counts[field] += Object.values(tabs[tab][field] || {}).filter(Boolean).length;
+                }
+                const commentsOnly = !Object.hasOwn(tabs.softsuper, 'progress');
+                document.getElementById('importSummary').textContent = commentsOnly
+                    ? `${file.name}: комментарии — ${counts.notes}. Только комментарии обеих вкладок; прогресс и избранное не изменятся.`
+                    : `${file.name}: выполнено — ${counts.progress}, избранное — ${counts.favorites}, комментарии — ${counts.notes}. Обе вкладки.`;
+                document.getElementById('replaceImportLabel').textContent = commentsOnly
+                    ? 'Заменить только комментарии обеих вкладок'
+                    : 'Полностью заменить обе вкладки';
+                document.getElementById('importMode').value = 'merge';
+                document.getElementById('importPreview').hidden = false;
+                dataStatus('Файл проверен. Выберите способ импорта.');
+            } catch (error) {
+                if (readVersion !== importReadVersion) return;
+                cancelImport();
+                dataStatus('Импорт не выполнен: ' + error.message, true);
+            }
+        });
+        document.getElementById('applyImport').addEventListener('click', () => {
+            if (!pendingImport) return;
+            const mode = document.getElementById('importMode').value;
+            const commentsOnly = !Object.hasOwn(pendingImport.softsuper, 'progress');
+            const replacement = commentsOnly ? 'только комментарии' : 'прогресс, избранное и комментарии';
+            if (mode === 'replace' && !confirm(`Заменить ${replacement} обеих вкладок? Перед заменой будет скачана резервная копия.`)) return;
+            try {
+                if (mode === 'replace') downloadBackup(readBackup(), 'training-tracker-before-import');
+                writeImportedTabs(pendingImport, mode);
+                cancelImport();
+                renderWeeks();
+                updateProgressBar();
+                dataStatus(commentsOnly ? 'Комментарии импортированы. Прогресс и избранное сохранены.' : 'Данные обеих вкладок импортированы.');
+            } catch (error) { dataStatus('Не удалось импортировать данные: ' + error.message, true); }
+        });
+
         // Initialize tabs
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => switchTab(btn.dataset.tab));
@@ -716,6 +936,7 @@
 
         // Initialize
         migrateOldData();
+        cleanStoredNotes();
         renderWeeks();
         updateProgressBar();
     </script>
